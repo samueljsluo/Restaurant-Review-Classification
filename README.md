@@ -6,7 +6,7 @@ The data can be download at https://www.kaggle.com/akram24/restaurant-reviews
 
 Results:
 	
-| Text                                                                    | Liked | Predict |
+| Reviews                                                                 | Liked | Predict |
 |-------------------------------------------------------------------------|-------|---------|
 | not even a "hello, we will be right with you."                          | 0     | 0       |
 | update.....went back for a second time and it was still just as amazing | 1     | 1       |
