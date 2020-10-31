@@ -2,9 +2,6 @@ import pandas as pd
 from transformers import BertTokenizer, AutoModel, AdamW
 import torch
 from sklearn.model_selection import train_test_split
-from sklearn.utils.class_weight import compute_class_weight
-from collections import Counter
-from operator import itemgetter
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import torch.nn as nn
 import numpy as np
@@ -14,7 +11,7 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print('GPU state:', device)
 PRETRAINED_MODEL_NAME = 'bert-base-uncased'
 BATCH_SIZE = 32
-EPOCH = 20
+EPOCH = 10
 
 bert = AutoModel.from_pretrained(PRETRAINED_MODEL_NAME)
 tokenizer = BertTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)
@@ -75,6 +72,7 @@ def train():
     total_preds = np.concatenate(total_preds, axis=0)
     return avg_loss, total_preds
 
+
 def evaluate():
     print("\nEvaluating...")
     model.eval()
@@ -99,6 +97,14 @@ def evaluate():
     return avg_loss, total_preds
 
 
+def tokenize_encode_covert_to_tensor(data, label):
+    encode = tokenizer.batch_encode_plus(data.tolist(), max_length=25, pad_to_max_length=True, truncation=True)
+    seq = torch.tensor(encode['input_ids'])
+    mask = torch.tensor(encode['attention_mask'])
+    y = torch.tensor(label.tolist())
+    return seq, mask, y
+
+
 dataset = pd.read_csv('data/Restaurant_Reviews.tsv', delimiter='\t', quoting=3)
 dataset['Review'] = dataset['Review'].apply(lambda x: x.lower())
 
@@ -111,21 +117,9 @@ val_text, test_text, val_labels, test_labels = train_test_split(temp_text, temp_
                                                                 test_size=0.5,
                                                                 stratify=temp_labels)
 
-token_train = tokenizer.batch_encode_plus(train_text.tolist(), max_length=25, pad_to_max_length=True, truncation=True)
-token_test = tokenizer.batch_encode_plus(test_text.tolist(), max_length=25, pad_to_max_length=True, truncation=True)
-token_val = tokenizer.batch_encode_plus(val_text.tolist(), max_length=25, pad_to_max_length=True, truncation=True)
-
-train_seq = torch.tensor(token_train['input_ids'])
-train_mask = torch.tensor(token_train['attention_mask'])
-train_y = torch.tensor(train_labels.tolist())
-
-test_seq = torch.tensor(token_test['input_ids'])
-test_mask = torch.tensor(token_test['attention_mask'])
-test_y = torch.tensor(test_labels.tolist())
-
-val_seq = torch.tensor(token_val['input_ids'])
-val_mask = torch.tensor(token_val['attention_mask'])
-val_y = torch.tensor(val_labels.tolist())
+train_seq, train_mask, train_y = tokenize_encode_covert_to_tensor(train_text, train_labels)
+test_seq, test_mask, test_y = tokenize_encode_covert_to_tensor(test_text, test_labels)
+val_seq, val_mask, val_y = tokenize_encode_covert_to_tensor(val_text, val_labels)
 
 train_data = TensorDataset(train_seq, train_mask, train_y)
 train_sampler = RandomSampler(train_data)
@@ -135,8 +129,8 @@ val_data = TensorDataset(val_seq, val_mask, val_y)
 val_sampler = SequentialSampler(val_data)
 val_dataloader = DataLoader(val_data, sampler=val_sampler, batch_size=BATCH_SIZE)
 
-for param in bert.parameters():
-    param.requires_grad = False
+# for param in bert.parameters():
+#     param.requires_grad = False
 
 model = BERT(bert)
 model = model.to(device)
@@ -170,3 +164,5 @@ with torch.no_grad():
 
 preds = np.argmax(preds, axis=1)
 print(classification_report(test_y, preds))
+for i in range(10):
+    print(test_text.tolist()[i], test_y.tolist()[i], preds[i])
