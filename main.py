@@ -56,17 +56,12 @@ def train():
         sent_id, mask, labels = batch
 
         model.zero_grad()
-        preds = model(sent_id,mask)
+        preds = model(sent_id, mask)
         loss = cross_entropy(preds, labels)
-
         total_loss = total_loss + loss.item()
-
         loss.backward()
-
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-
         optimizer.step()
-
         preds=preds.detach().cpu().numpy()
 
         total_preds.append(preds)
