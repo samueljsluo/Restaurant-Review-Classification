@@ -105,6 +105,7 @@ def tokenize_encode_covert_to_tensor(data, label):
 dataset = pd.read_csv('data/Restaurant_Reviews.tsv', delimiter='\t', quoting=3)
 dataset['Review'] = dataset['Review'].apply(lambda x: x.lower())
 
+#split data into train, validation and test
 train_text, temp_text, train_labels, temp_labels = train_test_split(dataset['Review'], dataset['Liked'],
                                                                     random_state=2018,
                                                                     test_size=0.3,
@@ -114,10 +115,12 @@ val_text, test_text, val_labels, test_labels = train_test_split(temp_text, temp_
                                                                 test_size=0.5,
                                                                 stratify=temp_labels)
 
+#tokenize and encode sequences, and convert it into tensor
 train_seq, train_mask, train_y = tokenize_encode_covert_to_tensor(train_text, train_labels)
 test_seq, test_mask, test_y = tokenize_encode_covert_to_tensor(test_text, test_labels)
 val_seq, val_mask, val_y = tokenize_encode_covert_to_tensor(val_text, val_labels)
 
+#wrap tensor and sampling data
 train_data = TensorDataset(train_seq, train_mask, train_y)
 train_sampler = RandomSampler(train_data)
 train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=BATCH_SIZE)
