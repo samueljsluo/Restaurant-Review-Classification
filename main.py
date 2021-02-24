@@ -23,6 +23,7 @@ class BERT(nn.Module):
         self.bert = bert
         self.dropout = nn.Dropout(0.1)
         self.relu = nn.ReLU()
+        # Dense Layer
         self.fc1 = nn.Linear(768, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 2)
@@ -50,18 +51,28 @@ def train():
     total_preds = []
 
     for step, batch in enumerate(train_dataloader):
+        # progress update every 50 batches
         if step%50==0 and not step==0:
             print("Batch {:>5} of {:>5}.".format(step, len(train_dataloader)))
+        # push to GPU
         batch = [r.to(device) for r in batch]
         sent_id, mask, labels = batch
 
+        # clear previous gradient
         model.zero_grad()
+        # get prediction from current batch
         preds = model(sent_id, mask)
+        # calculate loss
         loss = cross_entropy(preds, labels)
+        # add to total loss
         total_loss = total_loss + loss.item()
+        # backward to calculate gradients
         loss.backward()
+        # clip gradient to 1.0 to prevent exploding gradient
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        # update params
         optimizer.step()
+        # push back to CPU
         preds=preds.detach().cpu().numpy()
 
         total_preds.append(preds)
@@ -129,6 +140,7 @@ val_data = TensorDataset(val_seq, val_mask, val_y)
 val_sampler = RandomSampler(val_data)
 val_dataloader = DataLoader(val_data, sampler=val_sampler, batch_size=BATCH_SIZE)
 
+# prevent bert update params
 # for param in bert.parameters():
 #     param.requires_grad = False
 
